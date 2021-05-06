@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "posterlens"
+version = "0.1.0"
+description = "A dataset of posters for movies from MovieLens-25M"
+authors = ["Sasha Aptlin <sasha@aptlin.com>"]
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+imdbpy = {git = "https://github.com/alberanid/imdbpy"}
+requests = "^2.25.1"
+certifi = "^2020.12.5"
+tqdm = "^4.60.0"
+img2vec-pytorch = {git = "https://github.com/christiansafka/img2vec"}
+
+[tool.poetry.dev-dependencies]
+black = "^21.4b2"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
