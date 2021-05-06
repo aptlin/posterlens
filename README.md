@@ -6,22 +6,31 @@
 
 This repo contains the reproducible pipeline generating the dataset.
 
-## Setup
+## Download from Kaggle
+
+Download the data [from Kaggle](https://www.kaggle.com/aptlin/posterlens-25m):
+
+```
+kaggle datasets download -d aptlin/posterlens-25m
+```
+
+## Manual data generation
 
 1. Clone the repo:
    ```bash
    git clone git@github.com:aptlin/posterlens.git
    ```
 2. Install dependencies using [poetry](https://github.com/python-poetry/poetry):
+
    ```
    cd posterlens
    poetry install
    ```
 
 3. Run the pipeline:
-    ```
-    ./run.sh
-    ```
+   ```
+   ./run.sh
+   ```
 
 ## Citation
 
