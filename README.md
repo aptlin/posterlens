@@ -1,14 +1,16 @@
 # PosterLens 25M
 
-[MovieLens 25M](https://grouplens.org/datasets/movielens/25m/) contains 25 million ratings and one million tag applications applied to 62k+ movies by 162,000 users.
+## Full-size posters of movies from MovieLens 25M
 
-[PosterLens 25M](https://github.com/aptlin/posterlens) collects 62061 posters for movies from MovieLens 25 together with their ResNet-34 embeddings
+[MovieLens 25M](https://grouplens.org/datasets/movielens/25m/) contains 25M ratings and 1M tag applications applied to 62k+ movies by 162k users.
+
+[PosterLens 25M](https://www.kaggle.com/aptlin/posterlens-25m) collects 62061 posters for movies from MovieLens 25 together with their ResNet-34 embeddings
 
 This repo contains the reproducible pipeline generating the dataset.
 
 ## Download from Kaggle
 
-Download the data [from Kaggle](https://www.kaggle.com/aptlin/posterlens-25m):
+Download a copy from Kaggle:
 
 ```
 kaggle datasets download -d aptlin/posterlens-25m
