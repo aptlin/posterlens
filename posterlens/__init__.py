@@ -58,8 +58,8 @@ class PosterLens:
         return self.data_dir / self.config.MOVIELENS_25M_FN
 
     def collect(self):
-        # self._download_primary_data()
-        # self._download_covers()
+        self._download_primary_data()
+        self._download_covers()
         self._generate_embeddings()
 
     def _download_primary_data(self):
