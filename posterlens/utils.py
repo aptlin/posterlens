@@ -45,7 +45,12 @@ def download(url: str, file_path: Union[str, Path], attempts=2, show_progress=Fa
                 response.raise_for_status()
                 total_size = int(response.headers.get("content-length", 0))
                 if show_progress:
-                    pbar = tqdm(total=total_size, unit="MB", unit_scale=True)
+                    pbar = tqdm(
+                        total=total_size,
+                        unit="MB",
+                        unit_scale=True,
+                        desc=f"Downloading from {url} to {file_path}",
+                    )
                 with open(file_path, "wb") as out_file:
                     for chunk in response.iter_content(
                         chunk_size=1024 * 1024

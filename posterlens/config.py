@@ -6,23 +6,30 @@
 from dataclasses import dataclass
 import logging
 from multiprocessing import cpu_count
+from pathlib import Path
 
 
 @dataclass
 class Config:
     DATA_DIR: str = "data"
-    IMAGE_DIR: str = "posterlens-25m/covers"
-    EMBEDDING_DIR: str = "posterlens-25m/embeddings"
+    IMAGE_DIR_TEMPLATE: str = str(Path("posterlens-{}") / "covers")
+    EMBEDDING_DIR_TEMPLATE: str = "posterlens-{}/embeddings"
     DOWNLOAD_ATTEMPTS: int = 2
-    MOVIELENS_25M_CHECKSUM_FN: str = "ml-25m.zip.md5"
-    MOVIELENS_25M_CHECKSUM_URL: str = (
-        "http://files.grouplens.org/datasets/movielens/ml-25m.zip.md5"
-    )
-    MOVIELENS_25M_FN: str = "ml-25m.zip"
-    MOVIELENS_25M_LINKS_FN: str = "ml-25m/links.csv"
-    MOVIELENS_25M_URL: str = "http://files.grouplens.org/datasets/movielens/ml-25m.zip"
     TARGET_HEIGHT: int = 512
     POOL_WORKERS: int = cpu_count() * 2
+
+    SIZE_20M = "20m"
+    SIZE_25M = "25m"
+
+    MOVIELENS_PREFIX_TEMPLATE: str = "ml-{}"
+    MOVIELENS_LINKS_FN_TEMPLATE: str = str(
+        Path(MOVIELENS_PREFIX_TEMPLATE) / "links.csv"
+    )
+    MOVIELENS_BASE_URL: str = "http://files.grouplens.org/datasets/movielens/"
+    MOVIELENS_ZIP_URL_TEMPLATE: str = (
+        MOVIELENS_BASE_URL + MOVIELENS_PREFIX_TEMPLATE + ".zip"
+    )
+    MOVIELENS_CHECKSUM_URL_TEMPLATE: str = MOVIELENS_ZIP_URL_TEMPLATE + ".md5"
 
     def __init__(self):
         logging.basicConfig(level=logging.WARN)

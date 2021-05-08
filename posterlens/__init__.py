@@ -9,7 +9,7 @@ import random
 import zipfile
 from functools import cached_property
 from io import TextIOWrapper
-from multiprocessing import Pool
+from multiprocessing import Pool, Value
 from pathlib import Path
 from time import sleep
 
@@ -20,6 +20,7 @@ from tqdm import tqdm
 from img2vec_pytorch import Img2Vec
 from PIL import Image, ImageFile
 import numpy as np
+import json
 
 from posterlens.config import Config
 from posterlens.field import Field
@@ -30,10 +31,13 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 
 class PosterLens:
-    def __init__(self):
+    def __init__(
+        self, size: str = "25m"  # only 20m and 25m are supported at the moment
+    ):
         self.config = Config()
         self.field = Field()
         self.img2vec = Img2Vec(cuda=torch.cuda.is_available(), model="resnet34")
+        self.size = size
 
     @cached_property
     def data_dir(self):
@@ -43,19 +47,33 @@ class PosterLens:
 
     @cached_property
     def image_dir(self):
-        image_dir = self.data_dir / self.config.IMAGE_DIR
+        image_dir = self.data_dir / self.config.IMAGE_DIR_TEMPLATE.format(self.size)
         image_dir.mkdir(exist_ok=True, parents=True)
         return image_dir
 
     @cached_property
     def embedding_dir(self):
-        embedding_dir = self.data_dir / self.config.EMBEDDING_DIR
+        embedding_dir = self.data_dir / self.config.EMBEDDING_DIR_TEMPLATE.format(
+            self.size
+        )
         embedding_dir.mkdir(exist_ok=True, parents=True)
         return embedding_dir
 
-    @property
+    @cached_property
     def data_fn(self):
-        return self.data_dir / self.config.MOVIELENS_25M_FN
+        return self.data_dir / f"{self.size}.zip"
+
+    @cached_property
+    def links_fn(self):
+        return self.config.MOVIELENS_LINKS_FN_TEMPLATE.format(self.size)
+
+    @cached_property
+    def data_url(self):
+        return self.config.MOVIELENS_ZIP_URL_TEMPLATE.format(self.size)
+
+    @cached_property
+    def checksum_url(self):
+        return self.config.MOVIELENS_CHECKSUM_URL_TEMPLATE.format(self.size)
 
     def collect(self):
         self._download_primary_data()
@@ -64,20 +82,27 @@ class PosterLens:
 
     def _download_primary_data(self):
         with requests.get(
-            self.config.MOVIELENS_25M_CHECKSUM_URL, allow_redirects=True
+            self.checksum_url,
+            allow_redirects=True,
         ) as response:
             response.raise_for_status()
-            checksum = response.content.decode("utf-8").split()[0]
+            checksum_data = response.content.decode("utf-8")
+            if self.size == self.config.SIZE_25M:
+                checksum = checksum_data.split()[0].strip()
+            elif self.size == self.config.SIZE_20M:
+                checksum = checksum_data.split("=")[1].strip()
+            else:
+                raise ValueError("Unsupported size")
 
         if not self.data_fn.exists():
             logging.info(f"Downloading the dataset to {self.data_fn}...")
-            download(self.config.MOVIELENS_25M_URL, self.data_fn, show_progress=True)
+            download(self.data_url, self.data_fn, show_progress=True)
 
         test_checksum = md5(self.data_fn)
         if test_checksum != checksum:
-            logging.info(f"The dataset at {self.data_fn} is corrupted, overwriting...")
+            logging.warn(f"The dataset at {self.data_fn} is corrupted, overwriting...")
             self.data_fn.unlink()
-            download(self.config.MOVIELENS_25M_URL, self.data_fn, show_progress=True)
+            download(self.data_url, self.data_fn, show_progress=True)
 
     def _download_image(self, row):
         imdb_id = row[self.field.imdb_id]
@@ -102,11 +127,11 @@ class PosterLens:
     def _download_covers(self):
         with zipfile.ZipFile(self.data_fn, "r") as archive:
             movie_count = 0
-            with archive.open(self.config.MOVIELENS_25M_LINKS_FN, "r") as f:
+            with archive.open(self.links_fn, "r") as f:
                 for _ in f:
                     movie_count += 1
 
-            with archive.open(self.config.MOVIELENS_25M_LINKS_FN, "r") as f:
+            with archive.open(self.links_fn, "r") as f:
                 reader = csv.DictReader(
                     TextIOWrapper(f, "utf-8"),
                     fieldnames=[
@@ -119,7 +144,9 @@ class PosterLens:
                 next(reader, None)
 
                 with Pool(self.config.POOL_WORKERS) as pool:
-                    with tqdm(total=movie_count, unit="movies") as pbar:
+                    with tqdm(
+                        total=movie_count, unit="covers", desc="Downloading covers"
+                    ) as pbar:
                         total = 0
                         for res in pool.imap_unordered(self._download_image, reader):
                             pbar.update()
@@ -135,7 +162,9 @@ class PosterLens:
     def _generate_embeddings(self):
         total = sum(1 for _ in self.image_dir.iterdir())
         with Pool(self.config.POOL_WORKERS) as pool:
-            with tqdm(total=total, unit="covers") as pbar:
+            with tqdm(
+                total=total, unit="covers", desc="Running embedding inference"
+            ) as pbar:
                 for _ in pool.imap_unordered(
                     self._generate_embedding, self.image_dir.iterdir()
                 ):

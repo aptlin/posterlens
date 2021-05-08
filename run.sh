@@ -5,4 +5,4 @@
 # This software is released under the MIT License.
 # https://opensource.org/licenses/MIT
 
-python3 run.py
+python3 run.py --size $1

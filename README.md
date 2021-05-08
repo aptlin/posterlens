@@ -18,6 +18,12 @@ kaggle datasets download -d aptlin/posterlens-25m
 
 ## Manual data generation
 
+0. Pick the size of a dataset from [the official page with MovieLens datasets](https://grouplens.org/datasets/movielens/) (at the moment only 25m and 20m are supported)
+
+   ```bash
+   export MOVIELENS_SIZE= <Your string>
+   ```
+
 1. Clone the repo:
    ```bash
    git clone git@github.com:aptlin/posterlens.git
@@ -31,7 +37,7 @@ kaggle datasets download -d aptlin/posterlens-25m
 
 3. Run the pipeline:
    ```
-   ./run.sh
+   ./run.sh $MOVIELENS_SIZE
    ```
 
 ## Citation
