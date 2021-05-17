@@ -2,9 +2,15 @@
 
 ## Full-size posters of movies from MovieLens
 
+### 25M
+
 [MovieLens 25M](https://grouplens.org/datasets/movielens/25m/) contains 25M ratings and 1M tag applications applied to 62k+ movies by 162k users.
 
 [PosterLens 25M](https://www.kaggle.com/aptlin/posterlens-25m) collects **62061 posters** (~330 movies from the dataset are missing a cover)for movies from [MovieLens 25M](https://grouplens.org/datasets/movielens/25m/) together with their ResNet-34 embeddings.
+
+### 20M
+
+[MovieLens 20M](https://grouplens.org/datasets/movielens/25m/) contains 20M ratings and 0.5M tag applications applied to 27k+ movies by 138k users.
 
 [PosterLens 20M](https://www.kaggle.com/aptlin/posterlens-20m) collects **27163 posters** (115 movies from the dataset are missing a cover) for movies from [MovieLens 20M](https://grouplens.org/datasets/movielens/20m/) together with their ResNet-34 embeddings.
 
@@ -18,6 +24,12 @@ Download a copy from Kaggle:
 
 ```
 kaggle datasets download -d aptlin/posterlens-25m
+```
+
+### PosterLens 20M
+
+```
+kaggle datasets download -d aptlin/posterlens-20m
 ```
 
 ## Manual data generation

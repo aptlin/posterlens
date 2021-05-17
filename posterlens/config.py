@@ -12,18 +12,20 @@ from pathlib import Path
 @dataclass
 class Config:
     DATA_DIR: str = "data"
-    IMAGE_DIR_TEMPLATE: str = str(Path("posterlens-{}") / "covers")
-    EMBEDDING_DIR_TEMPLATE: str = "posterlens-{}/embeddings"
+    POSTERLENS_PREFIX_TEMPLATE: str = "posterlens-{}"
+    IMAGE_DIR_TEMPLATE: str = str(Path(POSTERLENS_PREFIX_TEMPLATE) / "covers")
+    EMBEDDING_DIR_TEMPLATE: str = str(Path(POSTERLENS_PREFIX_TEMPLATE) / "embeddings")
     DOWNLOAD_ATTEMPTS: int = 2
     TARGET_HEIGHT: int = 512
     POOL_WORKERS: int = cpu_count() * 2
 
+    SIZE_1M = "1m"
     SIZE_20M = "20m"
     SIZE_25M = "25m"
 
     MOVIELENS_PREFIX_TEMPLATE: str = "ml-{}"
-    MOVIELENS_LINKS_FN_TEMPLATE: str = str(
-        Path(MOVIELENS_PREFIX_TEMPLATE) / "links.csv"
+    MOVIELENS_MOVIES_FN_TEMPLATE: str = str(
+        Path(MOVIELENS_PREFIX_TEMPLATE) / "movies.{}"
     )
     MOVIELENS_BASE_URL: str = "http://files.grouplens.org/datasets/movielens/"
     MOVIELENS_ZIP_URL_TEMPLATE: str = (

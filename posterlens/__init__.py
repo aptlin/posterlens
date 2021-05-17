@@ -20,7 +20,6 @@ from tqdm import tqdm
 from img2vec_pytorch import Img2Vec
 from PIL import Image, ImageFile
 import numpy as np
-import json
 
 from posterlens.config import Config
 from posterlens.field import Field
@@ -37,7 +36,7 @@ class PosterLens:
         self.config = Config()
         self.field = Field()
         self.img2vec = Img2Vec(cuda=torch.cuda.is_available(), model="resnet34")
-        self.size = size
+        self.size = size.lower()
 
     @cached_property
     def data_dir(self):
@@ -61,11 +60,15 @@ class PosterLens:
 
     @cached_property
     def data_fn(self):
-        return self.data_dir / f"{self.size}.zip"
+        return self.data_dir / (
+            self.config.MOVIELENS_PREFIX_TEMPLATE.format(self.size) + ".zip"
+        )
 
     @cached_property
-    def links_fn(self):
-        return self.config.MOVIELENS_LINKS_FN_TEMPLATE.format(self.size)
+    def movies_fn(self):
+        return self.config.MOVIELENS_MOVIES_FN_TEMPLATE.format(
+            self.size, "dat" if self.size in (self.config.SIZE_1M) else "csv"
+        )
 
     @cached_property
     def data_url(self):
@@ -89,7 +92,7 @@ class PosterLens:
             checksum_data = response.content.decode("utf-8")
             if self.size == self.config.SIZE_25M:
                 checksum = checksum_data.split()[0].strip()
-            elif self.size == self.config.SIZE_20M:
+            elif self.size in (self.config.SIZE_20M, self.config.SIZE_1M):
                 checksum = checksum_data.split("=")[1].strip()
             else:
                 raise ValueError("Unsupported size")
@@ -105,43 +108,52 @@ class PosterLens:
             download(self.data_url, self.data_fn, show_progress=True)
 
     def _download_image(self, row):
-        imdb_id = row[self.field.imdb_id]
-        target_image_fn = self.image_dir / f"{imdb_id}.jpg"
+        movie_id = row[self.field.movie_id]
+        title = row[self.field.title]
+        target_image_fn = self.image_dir / f"{movie_id}.jpg"
         if not target_image_fn.exists():
             try:
                 imdb = IMDb(accessSystem="http", reraiseExceptions=True, timeout=False)
-                movie = imdb.get_movie(imdb_id, info=("main",))
-                cover_url = movie.get("full-size cover url", "")
+                movie = imdb.search_movie(title)[0]
+                cover_url = movie.get("full-size cover url", "").strip()
                 if cover_url:
-                    sleep(random.randint(1, 5))
+                    sleep(random.randint(3, 5))
                     download(cover_url, target_image_fn, 1)
                     return 0
                 else:
-                    raise ValueError(f"No cover for the movie {imdb_id}")
+                    raise ValueError(f"No cover for the movie {movie_id}")
             except Exception as err:
-                logging.info(f"Failed to get movie #{imdb_id} details: {str(err)}")
+                logging.info(f"Failed to get movie #{movie_id} details: {str(err)}")
                 return 1
         else:
             return 0
 
+    def _parse_1m(self, f):
+        fieldnames = [
+            self.field.movie_id,
+            self.field.title,
+            self.field.genres,
+        ]
+        for line in f:
+            parsed = line.decode("latin-1").split("::")
+            yield dict(zip(fieldnames, parsed))
+
     def _download_covers(self):
         with zipfile.ZipFile(self.data_fn, "r") as archive:
             movie_count = 0
-            with archive.open(self.links_fn, "r") as f:
+            with archive.open(self.movies_fn, "r") as f:
                 for _ in f:
                     movie_count += 1
 
-            with archive.open(self.links_fn, "r") as f:
-                reader = csv.DictReader(
-                    TextIOWrapper(f, "utf-8"),
-                    fieldnames=[
-                        self.field.movie_id,
-                        self.field.imdb_id,
-                        self.field.tmdb_id,
-                    ],
-                    delimiter=",",
-                )
-                next(reader, None)
+            with archive.open(self.movies_fn, "r") as f:
+
+                if self.size in (self.config.SIZE_1M):
+                    reader = self._parse_1m(f)
+                else:
+                    reader = csv.DictReader(
+                        TextIOWrapper(f, "utf-8"),
+                        delimiter=",",
+                    )
 
                 with Pool(self.config.POOL_WORKERS) as pool:
                     with tqdm(
@@ -155,9 +167,12 @@ class PosterLens:
                         logging.warn(f"Missing covers for {total} movies.")
 
     def _generate_embedding(self, fn: Path):
-        img = Image.open(fn).convert("RGB")
-        vec = self.img2vec.get_vec(img)
-        np.save(self.embedding_dir / f"{fn.stem}.npy", vec)
+        if any(str(fn).endswith(ext) for ext in ("jpg", "png")):
+            img = Image.open(fn).convert("RGB")
+            vec = self.img2vec.get_vec(img)
+            np.save(self.embedding_dir / f"{fn.stem}.npy", vec)
+        else:
+            logging.warn(f"Skipping {fn}")
 
     def _generate_embeddings(self):
         total = sum(1 for _ in self.image_dir.iterdir())
